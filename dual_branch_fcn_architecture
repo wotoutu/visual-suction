@@ -1,0 +1,29 @@
+// Dual-Branch FCN Architecture
+digraph {
+	input [label="输入层：RGB-D高度图
+RGB通道：场景的彩色图像
+深度通道（DDD）：高度信息（归一化处理后的深度值）
+旋转处理：输入高度图会被旋转16种角度（每22.5°旋转一次），以覆盖所有可能的推动/抓取方向" shape=box]
+	densenet_rgb [label="DenseNet分支1（RGB）
+输入：高度图的RGB通道（3通道）
+使用预训练的121层DenseNet提取特征（ImageNet预训练权重）" shape=box]
+	densenet_depth [label="DenseNet分支2（深度）
+输入：高度图的深度通道（1通道，归一化为DDD）
+使用另一个预训练的121层DenseNet提取特征" shape=box]
+	concat [label="通道拼接：将两个DenseNet的输出在通道维度拼接，形成融合特征图" shape=box]
+	conv_activation [label="卷积与激活：两个1×1卷积层，用于压缩通道数并混合特征
+ReLU激活函数和空间批归一化（BatchNorm），加速收敛并提升稳定性" shape=box]
+	upsample [label="上采样：通过双线性插值上采样将特征图恢复到原始高度图的分辨率（224×224像素）" shape=box]
+	output [label="输出层：Q值图
+输出维度：输出32通道的Q值图，对应
+16个推动动作：每个像素点代表沿该方向推动的预期奖励
+16个抓取动作：每个像素点代表在该位置抓取的预期奖励
+动作选择：对于每个旋转角度，从32个Q值中选择最大值对应的动作（推动方向+抓取角度）" shape=box]
+	input -> densenet_rgb
+	input -> densenet_depth
+	densenet_rgb -> concat
+	densenet_depth -> concat
+	concat -> conv_activation
+	conv_activation -> upsample
+	upsample -> output
+}
